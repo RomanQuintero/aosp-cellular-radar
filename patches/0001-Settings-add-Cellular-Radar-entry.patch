@@ -1,0 +1,151 @@
+From 21bcc1e45993c1d69011ab68077729efe7d6a0cf Mon Sep 17 00:00:00 2001
+From: Roman Quintero <romanquintero8@gmail.com>
+Date: Tue, 29 Sep 2026 15:20:19 +0200
+Subject: [PATCH 1/3] Settings: add Cellular Radar entry
+
+Change-Id: Ideb7106428f0542717ea11fbe169abf2125d06e8
+---
+ res/values/strings.xml                        |  4 ++
+ res/xml/cellular_radar.xml                    | 10 +++++
+ res/xml/network_provider_internet.xml         |  7 +++
+ .../telephony/CellularRadarFragment.java      | 29 +++++++++++++
+ .../CellularRadarPreferenceController.java    | 43 +++++++++++++++++++
+ 5 files changed, 93 insertions(+)
+ create mode 100644 res/xml/cellular_radar.xml
+ create mode 100644 src/com/android/settings/network/telephony/CellularRadarFragment.java
+ create mode 100644 src/com/android/settings/network/telephony/CellularRadarPreferenceController.java
+
+diff --git a/res/values/strings.xml b/res/values/strings.xml
+index 8246f5be5ae9a85b48e5ee7896bb912562d843fb..15fd66d3d7ce75828fccf7438f55c2e0934a95e7 100644
+--- a/res/values/strings.xml
++++ b/res/values/strings.xml
+@@ -7427,6 +7427,10 @@
+     <!-- Summary of Cellular security tile in Network & Internet settings page. [CHAR LIMIT=NONE]-->
+     <string name="cellular_security_summary">Network type, encryption, notification controls</string>
+ 
++    <string name="cellular_radar_title">Cellular Radar</string>
++<!-- Summary of Cellular Radar tile in Network & Internet settings page. [CHAR LIMIT=NONE]-->
++    <string name="cellular_radar_summary">Nearby cells, signal strength and network details</string>
++
+     <!-- Summary of Cellular network security settings page in Network & Internet. [CHAR LIMIT=NONE]-->
+     <string name="cellular_security_top_intro">These settings help protect your calls, messages, and data from outdated or unencrypted networks that could expose you to data theft or surveillance.</string>
+ 
+diff --git a/res/xml/cellular_radar.xml b/res/xml/cellular_radar.xml
+new file mode 100644
+index 0000000000000000000000000000000000000000..1df81677a4a4486406d463b740ab95e70b77c196
+--- /dev/null
++++ b/res/xml/cellular_radar.xml
+@@ -0,0 +1,10 @@
++<?xml version="1.0" encoding="utf-8"?>
++<PreferenceScreen
++    xmlns:android="http://schemas.android.com/apk/res/android">
++
++    <Preference
++        android:key="cellular_radar_status"
++        android:title="Cellular Radar"
++        android:summary="Cellular network diagnostics ready" />
++
++</PreferenceScreen>
+\ No newline at end of file
+diff --git a/res/xml/network_provider_internet.xml b/res/xml/network_provider_internet.xml
+index 7a33367231703d8334cab7b4d8c05f902d9cd79d..8399e23d43939b7b39c53c7908c3bd5cf78a4b89 100644
+--- a/res/xml/network_provider_internet.xml
++++ b/res/xml/network_provider_internet.xml
+@@ -118,4 +118,11 @@
+         android:summary="@string/cellular_security_summary"
+         android:order="30"
+         settings:controller="com.android.settings.network.CellularSecurityPreferenceController"/>
++
++    <Preference
++        android:key="cellular_radar_network_internet"
++        android:title="@string/cellular_radar_title"
++        android:summary="@string/cellular_radar_summary"
++        android:order="31"
++        settings:controller="com.android.settings.network.CellularRadarPreferenceController"/>
+ </PreferenceScreen>
+diff --git a/src/com/android/settings/network/telephony/CellularRadarFragment.java b/src/com/android/settings/network/telephony/CellularRadarFragment.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..7513d0e4162c2513d70a12f0850191c3ef6aae4a
+--- /dev/null
++++ b/src/com/android/settings/network/telephony/CellularRadarFragment.java
+@@ -0,0 +1,29 @@
++package com.android.settings.network.telephony;
++
++import android.app.settings.SettingsEnums;
++
++import com.android.settings.R;
++import com.android.settings.dashboard.DashboardFragment;
++
++/**
++ * Cellular network diagnostics and visualization.
++ */
++public class CellularRadarFragment extends DashboardFragment {
++
++    private static final String TAG = "CellularRadarFragment";
++
++    @Override
++    public int getMetricsCategory() {
++        return SettingsEnums.SETTINGS_NETWORK_CATEGORY;
++    }
++
++    @Override
++    protected String getLogTag() {
++        return TAG;
++    }
++
++    @Override
++    protected int getPreferenceScreenResId() {
++        return R.xml.cellular_radar;
++    }
++}
+\ No newline at end of file
+diff --git a/src/com/android/settings/network/telephony/CellularRadarPreferenceController.java b/src/com/android/settings/network/telephony/CellularRadarPreferenceController.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..e4cd57c8d60bd51b415c02b3f7a2da0d789f4baf
+--- /dev/null
++++ b/src/com/android/settings/network/telephony/CellularRadarPreferenceController.java
+@@ -0,0 +1,43 @@
++package com.android.settings.network;
++
++import android.app.settings.SettingsEnums;
++import android.content.Context;
++import android.content.pm.PackageManager;
++import android.text.TextUtils;
++
++import androidx.annotation.NonNull;
++import androidx.preference.Preference;
++
++import com.android.settings.core.BasePreferenceController;
++import com.android.settings.core.SubSettingLauncher;
++import com.android.settings.network.telephony.CellularRadarFragment;
++
++public class CellularRadarPreferenceController extends BasePreferenceController {
++
++    public CellularRadarPreferenceController(
++            @NonNull Context context, @NonNull String preferenceKey) {
++        super(context, preferenceKey);
++    }
++
++    @Override
++    public int getAvailabilityStatus() {
++        return mContext.getPackageManager()
++                .hasSystemFeature(PackageManager.FEATURE_TELEPHONY)
++                ? AVAILABLE
++                : UNSUPPORTED_ON_DEVICE;
++    }
++
++    @Override
++    public boolean handlePreferenceTreeClick(@NonNull Preference preference) {
++        if (!TextUtils.equals(preference.getKey(), getPreferenceKey())) {
++            return super.handlePreferenceTreeClick(preference);
++        }
++
++        new SubSettingLauncher(mContext)
++                .setDestination(CellularRadarFragment.class.getName())
++                .setSourceMetricsCategory(SettingsEnums.SETTINGS_NETWORK_CATEGORY)
++                .launch();
++
++        return true;
++    }
++}
+\ No newline at end of file

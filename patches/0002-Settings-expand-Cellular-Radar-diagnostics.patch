@@ -1,0 +1,863 @@
+From 44dbfd737518c26901c99f2ebffd3f8391f5ac69 Mon Sep 17 00:00:00 2001
+From: Roman Quintero <romanquintero8@gmail.com>
+Date: Tue, 29 Sep 2026 16:47:27 +0200
+Subject: [PATCH 2/3] Settings: expand Cellular Radar diagnostics
+
+Change-Id: If960d72ecb4babe0d557326121ea683e20af5eb9
+---
+ res/values/strings.xml                        |  59 +++++
+ .../network/telephony/CellularRadarCell.java  | 186 +++++++++++++
+ .../telephony/CellularRadarFormatter.java     | 175 ++++++++++++
+ .../telephony/CellularRadarCellTest.java      | 249 ++++++++++++++++++
+ .../telephony/CellularRadarFormatterTest.java | 143 ++++++++++
+ 5 files changed, 812 insertions(+)
+ create mode 100644 src/com/android/settings/network/telephony/CellularRadarCell.java
+ create mode 100644 src/com/android/settings/network/telephony/CellularRadarFormatter.java
+ create mode 100644 tests/robotests/src/com/android/settings/network/telephony/CellularRadarCellTest.java
+ create mode 100644 tests/robotests/src/com/android/settings/network/telephony/CellularRadarFormatterTest.java
+
+diff --git a/res/values/strings.xml b/res/values/strings.xml
+index 15fd66d3d7ce75828fccf7438f55c2e0934a95e7..c06771538ac7fb0b83af9960001c1cd438d09979 100644
+--- a/res/values/strings.xml
++++ b/res/values/strings.xml
+@@ -15594,4 +15594,63 @@
+     <!-- Search keywords for Human interface device access setting -->
+     <string name="keywords_access_hid">hid, human, access, device</string>
+     <!-- Access HID end -->
++    <string name="cellular_radar_refresh">Refresh cell information</string>
++    <string name="cellular_radar_serving">Serving cells</string>
++    <string name="cellular_radar_observed">Observed cells</string>
++    <string name="cellular_radar_no_serving">No serving cells reported</string>
++    <string name="cellular_radar_no_observed">No observed cells reported</string>
++    <string name="cellular_radar_unavailable_value">Unavailable</string>
++    <string name="cellular_radar_unknown_technology">Unknown radio technology</string>
++    <string name="cellular_radar_role_primary">Primary serving</string>
++    <string name="cellular_radar_role_secondary">Secondary serving</string>
++    <string name="cellular_radar_role_registered">Registered / camped</string>
++    <string name="cellular_radar_role_observed">Observed / neighboring</string>
++    <string name="cellular_radar_role_unknown">Serving status unknown</string>
++    <string name="cellular_radar_cell_title">%1$s · %2$s</string>
++    <string name="cellular_radar_metric_value">%1$s: %2$s</string>
++    <string name="cellular_radar_value_dbm">%1$d dBm</string>
++    <string name="cellular_radar_value_db">%1$d dB</string>
++    <string name="cellular_radar_measurement_age">Measurement age at display: %1$d s</string>
++    <string name="cellular_radar_status_loading">Requesting cell information for the default subscription…</string>
++    <string name="cellular_radar_status_ready">Framework-reported cells for the default subscription. Modem data may be partial, cached, or simulated.</string>
++    <string name="cellular_radar_status_empty">No cell information reported. The modem may provide no data when the radio is off, there is no SIM, or the modem is simulated.</string>
++    <string name="cellular_radar_status_location_disabled">Location is off. Turn on Location, then refresh to request cell information.</string>
++    <string name="cellular_radar_status_unavailable">Cell information is unavailable on this device or the telephony service is not ready.</string>
++    <string name="cellular_radar_status_permission_denied">Cell information requires Location and phone permissions for Settings.</string>
++    <string name="cellular_radar_status_timeout">The cell information request timed out. Any cells shown are the last reported measurements; refresh to retry.</string>
++    <string name="cellular_radar_status_modem_error">The modem could not refresh cell information. Any cells shown are the last reported measurements; refresh to retry.</string>
++    <string name="cellular_radar_metric_nci">Cell ID (NCI)</string>
++    <string name="cellular_radar_metric_ci">Cell ID (CI/CID)</string>
++    <string name="cellular_radar_metric_pci">PCI</string>
++    <string name="cellular_radar_metric_tac">TAC</string>
++    <string name="cellular_radar_metric_lac">LAC</string>
++    <string name="cellular_radar_metric_psc">PSC</string>
++    <string name="cellular_radar_metric_bsic">BSIC</string>
++    <string name="cellular_radar_metric_cpid">CPID</string>
++    <string name="cellular_radar_metric_base_station_id">Base station ID</string>
++    <string name="cellular_radar_metric_network_id">Network ID</string>
++    <string name="cellular_radar_metric_system_id">System ID</string>
++    <string name="cellular_radar_metric_signal">Signal strength</string>
++    <string name="cellular_radar_metric_rsrp">RSRP</string>
++    <string name="cellular_radar_metric_rsrq">RSRQ</string>
++    <string name="cellular_radar_metric_rssnr">RSSNR</string>
++    <string name="cellular_radar_metric_ss_rsrp">SS-RSRP</string>
++    <string name="cellular_radar_metric_ss_rsrq">SS-RSRQ</string>
++    <string name="cellular_radar_metric_ss_sinr">SS-SINR</string>
++    <string name="cellular_radar_metric_csi_rsrp">CSI-RSRP</string>
++    <string name="cellular_radar_metric_csi_rsrq">CSI-RSRQ</string>
++    <string name="cellular_radar_metric_csi_sinr">CSI-SINR</string>
++    <string name="cellular_radar_metric_cdma_signal">CDMA signal strength</string>
++    <string name="cellular_radar_metric_evdo_signal">EVDO signal strength</string>
++    <!-- Cellular Radar: framework-reported cell identity diagnostic labels. -->
++    <string name="cellular_radar_identity_operator">Operator</string>
++    <string name="cellular_radar_identity_plmn">PLMN</string>
++    <string name="cellular_radar_identity_mcc">MCC</string>
++    <string name="cellular_radar_identity_mnc">MNC</string>
++    <string name="cellular_radar_identity_bands">Bands</string>
++    <!-- Radio band designations: n41 for NR, B41 for LTE. -->
++    <string name="cellular_radar_nr_band" translatable="false">n%1$s</string>
++    <string name="cellular_radar_lte_band" translatable="false">B%1$s</string>
++    <string name="cellular_radar_metric_nrarfcn">NRARFCN</string>
++    <string name="cellular_radar_metric_earfcn">EARFCN</string>
+ </resources>
+diff --git a/src/com/android/settings/network/telephony/CellularRadarCell.java b/src/com/android/settings/network/telephony/CellularRadarCell.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..0d9ed3772897eb25a66eb800dbcff5d6fb6eae25
+--- /dev/null
++++ b/src/com/android/settings/network/telephony/CellularRadarCell.java
+@@ -0,0 +1,186 @@
++/*
++ * Copyright (C) 2026 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License
++ */
++
++package com.android.settings.network.telephony;
++
++import android.telephony.CellIdentity;
++import android.telephony.CellIdentityCdma;
++import android.telephony.CellIdentityGsm;
++import android.telephony.CellIdentityLte;
++import android.telephony.CellIdentityNr;
++import android.telephony.CellIdentityTdscdma;
++import android.telephony.CellIdentityWcdma;
++import android.telephony.CellInfo;
++import android.telephony.CellInfoCdma;
++import android.telephony.CellInfoGsm;
++import android.telephony.CellInfoLte;
++import android.telephony.CellInfoNr;
++import android.telephony.CellInfoTdscdma;
++import android.telephony.CellInfoWcdma;
++import android.telephony.CellSignalStrengthCdma;
++import android.telephony.CellSignalStrengthLte;
++import android.telephony.CellSignalStrengthNr;
++
++import androidx.annotation.Nullable;
++
++import java.util.ArrayList;
++import java.util.Collections;
++import java.util.EnumMap;
++import java.util.List;
++import java.util.Map;
++
++/** Immutable, technology-neutral snapshot. No UI state or guessed radio values. */
++final class CellularRadarCell {
++    enum Technology { NR, LTE, WCDMA, GSM, TD_SCDMA, CDMA, UNKNOWN }
++    enum Role { PRIMARY, SECONDARY, REGISTERED, OBSERVED, UNKNOWN }
++    enum Metric {
++        NRARFCN, EARFCN, NCI, CI, PCI, TAC, LAC, PSC, BSIC, CPID, BASE_STATION_ID, NETWORK_ID, SYSTEM_ID,
++        SIGNAL, RSRP, RSRQ, RSSNR, SS_RSRP, SS_RSRQ, SS_SINR, CSI_RSRP, CSI_RSRQ, CSI_SINR,
++        CDMA_SIGNAL, EVDO_SIGNAL
++    }
++
++    final Technology technology;
++    final Role role;
++    final long timestampMillis;
++    // Empty strings/lists represent unavailable identity fields.
++    final String operator;
++    final String mcc;
++    final String mnc;
++    final String plmn;
++    final List<Integer> bands;
++    // Applicable metrics are retained even when unavailable; inapplicable metrics are absent.
++    final Map<Metric, Long> metrics;
++
++    private CellularRadarCell(Technology technology, Role role, long timestampMillis,
++            Map<Metric, Long> metrics, CellIdentity identity, @Nullable int[] bands) {
++        this.technology = technology;
++        this.role = role;
++        this.timestampMillis = timestampMillis;
++        CharSequence alphaLong = identity.getOperatorAlphaLong();
++        operator = alphaLong == null ? "" : alphaLong.toString().trim();
++        mcc = networkCode(identity.getMccString(), true);
++        mnc = networkCode(identity.getMncString(), false);
++        plmn = mcc.isEmpty() || mnc.isEmpty() ? "" : mcc + mnc;
++        List<Integer> reportedBands = new ArrayList<>();
++        if (bands != null) {
++            for (int band : bands) {
++                if (band > 0 && band != CellInfo.UNAVAILABLE) {
++                    reportedBands.add(band);
++                }
++            }
++        }
++        this.bands = Collections.unmodifiableList(reportedBands);
++        this.metrics = Collections.unmodifiableMap(new EnumMap<>(metrics));
++    }
++
++    boolean isServing() {
++        return role == Role.PRIMARY || role == Role.SECONDARY || role == Role.REGISTERED;
++    }
++
++    static CellularRadarCell from(CellInfo cell) {
++        Map<Metric, Long> values = new EnumMap<>(Metric.class);
++        Technology technology = Technology.UNKNOWN;
++        int[] bands = new int[0];
++        if (cell instanceof CellInfoNr) {
++            technology = Technology.NR;
++            CellIdentityNr id = (CellIdentityNr) cell.getCellIdentity();
++            CellSignalStrengthNr signal = (CellSignalStrengthNr) cell.getCellSignalStrength();
++            bands = id.getBands();
++            put(values, Metric.NRARFCN, id.getNrarfcn());
++            // This checkout's default NR identity uses the int sentinel for NCI.
++            // Suppress both sentinel representations in this diagnostic model.
++            long nci = id.getNci();
++            values.put(Metric.NCI, nci == CellInfo.UNAVAILABLE
++                    ? CellInfo.UNAVAILABLE_LONG : nci);
++            put(values, Metric.PCI, id.getPci());
++            put(values, Metric.TAC, id.getTac());
++            put(values, Metric.SS_RSRP, signal.getSsRsrp());
++            put(values, Metric.SS_RSRQ, signal.getSsRsrq());
++            put(values, Metric.SS_SINR, signal.getSsSinr());
++            put(values, Metric.CSI_RSRP, signal.getCsiRsrp());
++            put(values, Metric.CSI_RSRQ, signal.getCsiRsrq());
++            put(values, Metric.CSI_SINR, signal.getCsiSinr());
++        } else if (cell instanceof CellInfoLte) {
++            technology = Technology.LTE;
++            CellIdentityLte id = ((CellInfoLte) cell).getCellIdentity();
++            CellSignalStrengthLte signal = ((CellInfoLte) cell).getCellSignalStrength();
++            bands = id.getBands();
++            put(values, Metric.EARFCN, id.getEarfcn());
++            put(values, Metric.CI, id.getCi());
++            put(values, Metric.PCI, id.getPci());
++            put(values, Metric.TAC, id.getTac());
++            put(values, Metric.RSRP, signal.getRsrp());
++            put(values, Metric.RSRQ, signal.getRsrq());
++            // Android 17's getter returns dB, not tenths of a dB.
++            put(values, Metric.RSSNR, signal.getRssnr());
++        } else if (cell instanceof CellInfoWcdma) {
++            technology = Technology.WCDMA;
++            CellIdentityWcdma id = ((CellInfoWcdma) cell).getCellIdentity();
++            put(values, Metric.CI, id.getCid());
++            put(values, Metric.LAC, id.getLac());
++            put(values, Metric.PSC, id.getPsc());
++        } else if (cell instanceof CellInfoGsm) {
++            technology = Technology.GSM;
++            CellIdentityGsm id = ((CellInfoGsm) cell).getCellIdentity();
++            put(values, Metric.CI, id.getCid());
++            put(values, Metric.LAC, id.getLac());
++            put(values, Metric.BSIC, id.getBsic());
++        } else if (cell instanceof CellInfoTdscdma) {
++            technology = Technology.TD_SCDMA;
++            CellIdentityTdscdma id = ((CellInfoTdscdma) cell).getCellIdentity();
++            put(values, Metric.CI, id.getCid());
++            put(values, Metric.LAC, id.getLac());
++            put(values, Metric.CPID, id.getCpid());
++        } else if (cell instanceof CellInfoCdma) {
++            technology = Technology.CDMA;
++            CellIdentityCdma id = ((CellInfoCdma) cell).getCellIdentity();
++            CellSignalStrengthCdma signal = ((CellInfoCdma) cell).getCellSignalStrength();
++            put(values, Metric.BASE_STATION_ID, id.getBasestationId());
++            put(values, Metric.NETWORK_ID, id.getNetworkId());
++            put(values, Metric.SYSTEM_ID, id.getSystemId());
++            // Keep these separate: CDMA getDbm() combines unavailable values with Math.min().
++            put(values, Metric.CDMA_SIGNAL, signal.getCdmaDbm());
++            put(values, Metric.EVDO_SIGNAL, signal.getEvdoDbm());
++        }
++        if (technology != Technology.CDMA) {
++            put(values, Metric.SIGNAL, cell.getCellSignalStrength().getDbm());
++        }
++        Role role;
++        switch (cell.getCellConnectionStatus()) {
++            case CellInfo.CONNECTION_PRIMARY_SERVING:
++                role = Role.PRIMARY;
++                break;
++            case CellInfo.CONNECTION_SECONDARY_SERVING:
++                role = Role.SECONDARY;
++                break;
++            default:
++                role = cell.isRegistered() ? Role.REGISTERED
++                        : cell.getCellConnectionStatus() == CellInfo.CONNECTION_NONE
++                                ? Role.OBSERVED : Role.UNKNOWN;
++        }
++        return new CellularRadarCell(technology, role, cell.getTimestampMillis(), values,
++                cell.getCellIdentity(), bands);
++    }
++
++    private static String networkCode(@Nullable String value, boolean isMcc) {
++        return value != null && value.matches(isMcc ? "[0-9]{3}" : "[0-9]{2,3}")
++                ? value : "";
++    }
++
++    private static void put(Map<Metric, Long> values, Metric metric, int value) {
++        values.put(metric, value == CellInfo.UNAVAILABLE ? CellInfo.UNAVAILABLE_LONG : value);
++    }
++}
+diff --git a/src/com/android/settings/network/telephony/CellularRadarFormatter.java b/src/com/android/settings/network/telephony/CellularRadarFormatter.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..8a95095b2218c7c6bbd3985ea3eeff012386fc1f
+--- /dev/null
++++ b/src/com/android/settings/network/telephony/CellularRadarFormatter.java
+@@ -0,0 +1,175 @@
++/*
++ * Copyright (C) 2026 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License
++ */
++
++package com.android.settings.network.telephony;
++
++import android.content.Context;
++import android.os.SystemClock;
++import android.telephony.CellInfo;
++
++import com.android.settings.R;
++
++import java.util.Map;
++
++/** Localized diagnostic text; never interprets observed signal as a location or distance. */
++final class CellularRadarFormatter {
++    private final Context mContext;
++
++    CellularRadarFormatter(Context context) {
++        mContext = context;
++    }
++
++    String title(CellularRadarCell cell) {
++        String technology;
++        switch (cell.technology) {
++            case NR: technology = "5G NR"; break;
++            case LTE: technology = "LTE"; break;
++            case WCDMA: technology = "WCDMA"; break;
++            case GSM: technology = "GSM"; break;
++            case TD_SCDMA: technology = "TD-SCDMA"; break;
++            case CDMA: technology = "CDMA / EVDO"; break;
++            default: technology = mContext.getString(R.string.cellular_radar_unknown_technology);
++        }
++        int role;
++        switch (cell.role) {
++            case PRIMARY: role = R.string.cellular_radar_role_primary; break;
++            case SECONDARY: role = R.string.cellular_radar_role_secondary; break;
++            case REGISTERED: role = R.string.cellular_radar_role_registered; break;
++            case OBSERVED: role = R.string.cellular_radar_role_observed; break;
++            default: role = R.string.cellular_radar_role_unknown;
++        }
++        return mContext.getString(R.string.cellular_radar_cell_title, technology,
++                mContext.getString(role));
++    }
++
++    String summary(CellularRadarCell cell) {
++        StringBuilder text = new StringBuilder();
++        appendIdentity(text, R.string.cellular_radar_identity_operator, cell.operator);
++        if (cell.technology != CellularRadarCell.Technology.CDMA) {
++            appendIdentity(text, R.string.cellular_radar_identity_plmn, cell.plmn);
++            appendIdentity(text, R.string.cellular_radar_identity_mcc, cell.mcc);
++            appendIdentity(text, R.string.cellular_radar_identity_mnc, cell.mnc);
++        }
++        if (cell.technology == CellularRadarCell.Technology.NR
++                || cell.technology == CellularRadarCell.Technology.LTE) {
++            StringBuilder bands = new StringBuilder();
++            for (int band : cell.bands) {
++                if (bands.length() > 0) {
++                    bands.append(", ");
++                }
++                bands.append(mContext.getString(
++                        cell.technology == CellularRadarCell.Technology.NR
++                                ? R.string.cellular_radar_nr_band : R.string.cellular_radar_lte_band,
++                        Integer.toString(band)));
++            }
++            appendIdentity(text, R.string.cellular_radar_identity_bands, bands.toString());
++        }
++        for (Map.Entry<CellularRadarCell.Metric, Long> entry : cell.metrics.entrySet()) {
++            if (text.length() > 0) {
++                text.append('\n');
++            }
++            long value = entry.getValue();
++            String formatted;
++            if (value == CellInfo.UNAVAILABLE_LONG) {
++                formatted = mContext.getString(R.string.cellular_radar_unavailable_value);
++            } else {
++                switch (entry.getKey()) {
++                    case SIGNAL:
++                    case RSRP:
++                    case SS_RSRP:
++                    case CSI_RSRP:
++                    case CDMA_SIGNAL:
++                    case EVDO_SIGNAL:
++                        formatted = mContext.getString(R.string.cellular_radar_value_dbm, value);
++                        break;
++                    case RSRQ:
++                    case RSSNR:
++                    case SS_RSRQ:
++                    case SS_SINR:
++                    case CSI_RSRQ:
++                    case CSI_SINR:
++                        formatted = mContext.getString(R.string.cellular_radar_value_db, value);
++                        break;
++                    default:
++                        formatted = Long.toString(value);
++                }
++            }
++            text.append(mContext.getString(R.string.cellular_radar_metric_value,
++                    mContext.getString(metricLabel(entry.getKey())), formatted));
++        }
++        long now = SystemClock.elapsedRealtime();
++        if (cell.timestampMillis > 0 && cell.timestampMillis <= now) {
++            text.append('\n').append(mContext.getString(R.string.cellular_radar_measurement_age,
++                    (now - cell.timestampMillis) / 1000));
++        }
++        return text.toString();
++    }
++
++    private void appendIdentity(StringBuilder text, int label, String value) {
++        if (text.length() > 0) {
++            text.append('\n');
++        }
++        text.append(mContext.getString(R.string.cellular_radar_metric_value,
++                mContext.getString(label), value.isEmpty()
++                        ? mContext.getString(R.string.cellular_radar_unavailable_value) : value));
++    }
++
++    String status(CellularRadarRepository.Status status) {
++        int label;
++        switch (status) {
++            case LOADING: label = R.string.cellular_radar_status_loading; break;
++            case READY: label = R.string.cellular_radar_status_ready; break;
++            case EMPTY: label = R.string.cellular_radar_status_empty; break;
++            case LOCATION_DISABLED: label = R.string.cellular_radar_status_location_disabled; break;
++            case UNAVAILABLE: label = R.string.cellular_radar_status_unavailable; break;
++            case PERMISSION_DENIED: label = R.string.cellular_radar_status_permission_denied; break;
++            case TIMEOUT: label = R.string.cellular_radar_status_timeout; break;
++            default: label = R.string.cellular_radar_status_modem_error;
++        }
++        return mContext.getString(label);
++    }
++
++    private int metricLabel(CellularRadarCell.Metric metric) {
++        switch (metric) {
++            case NRARFCN: return R.string.cellular_radar_metric_nrarfcn;
++            case EARFCN: return R.string.cellular_radar_metric_earfcn;
++            case NCI: return R.string.cellular_radar_metric_nci;
++            case CI: return R.string.cellular_radar_metric_ci;
++            case PCI: return R.string.cellular_radar_metric_pci;
++            case TAC: return R.string.cellular_radar_metric_tac;
++            case LAC: return R.string.cellular_radar_metric_lac;
++            case PSC: return R.string.cellular_radar_metric_psc;
++            case BSIC: return R.string.cellular_radar_metric_bsic;
++            case CPID: return R.string.cellular_radar_metric_cpid;
++            case BASE_STATION_ID: return R.string.cellular_radar_metric_base_station_id;
++            case NETWORK_ID: return R.string.cellular_radar_metric_network_id;
++            case SYSTEM_ID: return R.string.cellular_radar_metric_system_id;
++            case SIGNAL: return R.string.cellular_radar_metric_signal;
++            case RSRP: return R.string.cellular_radar_metric_rsrp;
++            case RSRQ: return R.string.cellular_radar_metric_rsrq;
++            case RSSNR: return R.string.cellular_radar_metric_rssnr;
++            case SS_RSRP: return R.string.cellular_radar_metric_ss_rsrp;
++            case SS_RSRQ: return R.string.cellular_radar_metric_ss_rsrq;
++            case SS_SINR: return R.string.cellular_radar_metric_ss_sinr;
++            case CSI_RSRP: return R.string.cellular_radar_metric_csi_rsrp;
++            case CSI_RSRQ: return R.string.cellular_radar_metric_csi_rsrq;
++            case CSI_SINR: return R.string.cellular_radar_metric_csi_sinr;
++            case CDMA_SIGNAL: return R.string.cellular_radar_metric_cdma_signal;
++            case EVDO_SIGNAL: return R.string.cellular_radar_metric_evdo_signal;
++            default: throw new IllegalArgumentException("Unknown metric: " + metric);
++        }
++    }
++}
+diff --git a/tests/robotests/src/com/android/settings/network/telephony/CellularRadarCellTest.java b/tests/robotests/src/com/android/settings/network/telephony/CellularRadarCellTest.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..70d2c28de0c00d19b1839afd7f730fde93bfc27d
+--- /dev/null
++++ b/tests/robotests/src/com/android/settings/network/telephony/CellularRadarCellTest.java
+@@ -0,0 +1,249 @@
++/*
++ * Copyright (C) 2026 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License
++ */
++
++package com.android.settings.network.telephony;
++
++import static com.google.common.truth.Truth.assertThat;
++import static org.mockito.Mockito.mock;
++import static org.mockito.Mockito.when;
++
++import android.telephony.CellIdentity;
++import android.telephony.CellIdentityGsm;
++import android.telephony.CellIdentityLte;
++import android.telephony.CellIdentityTdscdma;
++import android.telephony.CellIdentityWcdma;
++import android.telephony.CellIdentityNr;
++import android.telephony.CellInfo;
++import android.telephony.CellInfoCdma;
++import android.telephony.CellInfoGsm;
++import android.telephony.CellInfoLte;
++import android.telephony.CellInfoNr;
++import android.telephony.CellInfoTdscdma;
++import android.telephony.CellInfoWcdma;
++import android.telephony.CellSignalStrengthLte;
++import android.telephony.CellSignalStrengthNr;
++
++import org.junit.Test;
++import org.junit.runner.RunWith;
++import org.robolectric.RobolectricTestRunner;
++
++@RunWith(RobolectricTestRunner.class)
++public class CellularRadarCellTest {
++    @Test
++    public void lte_mapsIdentityAndDbUnits_withoutScalingRssnr() {
++        CellInfoLte cell = mock(CellInfoLte.class);
++        CellIdentityLte id = mock(CellIdentityLte.class);
++        CellSignalStrengthLte signal = mock(CellSignalStrengthLte.class);
++        when(cell.getCellIdentity()).thenReturn(id);
++        when(cell.getCellSignalStrength()).thenReturn(signal);
++        when(id.getCi()).thenReturn(123456);
++        when(id.getOperatorAlphaLong()).thenReturn("LTE operator");
++        when(id.getMccString()).thenReturn("001");
++        when(id.getMncString()).thenReturn("01");
++        when(id.getBands()).thenReturn(new int[] {3, 7});
++        when(id.getEarfcn()).thenReturn(1800);
++        when(id.getPci()).thenReturn(0);
++        when(id.getTac()).thenReturn(42);
++        when(signal.getDbm()).thenReturn(-95);
++        when(signal.getRsrp()).thenReturn(-95);
++        when(signal.getRsrq()).thenReturn(-12);
++        when(signal.getRssnr()).thenReturn(15);
++        when(cell.getCellConnectionStatus()).thenReturn(CellInfo.CONNECTION_PRIMARY_SERVING);
++        when(cell.getTimestampMillis()).thenReturn(1234L);
++
++        CellularRadarCell result = CellularRadarCell.from(cell);
++
++        assertThat(result.technology).isEqualTo(CellularRadarCell.Technology.LTE);
++        assertThat(result.isServing()).isTrue();
++        assertThat(result.timestampMillis).isEqualTo(1234L);
++        assertThat(result.operator).isEqualTo("LTE operator");
++        assertThat(result.mcc).isEqualTo("001");
++        assertThat(result.mnc).isEqualTo("01");
++        assertThat(result.plmn).isEqualTo("00101");
++        assertThat(result.bands).containsExactly(3, 7).inOrder();
++        assertThat(result.metrics).containsEntry(CellularRadarCell.Metric.EARFCN, 1800L);
++        assertThat(result.metrics).containsEntry(CellularRadarCell.Metric.CI, 123456L);
++        assertThat(result.metrics).containsEntry(CellularRadarCell.Metric.PCI, 0L);
++        assertThat(result.metrics).containsEntry(CellularRadarCell.Metric.TAC, 42L);
++        assertThat(result.metrics).containsEntry(CellularRadarCell.Metric.RSRP, -95L);
++        assertThat(result.metrics).containsEntry(CellularRadarCell.Metric.RSRQ, -12L);
++        assertThat(result.metrics).containsEntry(CellularRadarCell.Metric.RSSNR, 15L);
++    }
++
++    @Test
++    public void nr_preservesLongNci_andSeparateSsAndCsiMetrics() {
++        CellInfo cell = mock(CellInfoNr.class);
++        CellIdentityNr id = mock(CellIdentityNr.class);
++        CellSignalStrengthNr signal = mock(CellSignalStrengthNr.class);
++        when(cell.getCellIdentity()).thenReturn(id);
++        when(cell.getCellSignalStrength()).thenReturn(signal);
++        when(id.getNci()).thenReturn(0xFFFFFFFFFL);
++        when(signal.getSsRsrp()).thenReturn(-100);
++        when(signal.getSsRsrq()).thenReturn(-15);
++        when(signal.getSsSinr()).thenReturn(0);
++        when(signal.getCsiRsrp()).thenReturn(-105);
++        when(signal.getCsiRsrq()).thenReturn(-18);
++        when(signal.getCsiSinr()).thenReturn(-3);
++        when(cell.getCellConnectionStatus()).thenReturn(CellInfo.CONNECTION_SECONDARY_SERVING);
++
++        CellularRadarCell result = CellularRadarCell.from(cell);
++
++        assertThat(result.role).isEqualTo(CellularRadarCell.Role.SECONDARY);
++        assertThat(result.isServing()).isTrue();
++        assertThat(result.metrics).containsEntry(CellularRadarCell.Metric.NCI, 0xFFFFFFFFFL);
++        assertThat(result.metrics).containsEntry(CellularRadarCell.Metric.SS_RSRP, -100L);
++        assertThat(result.metrics).containsEntry(CellularRadarCell.Metric.SS_RSRQ, -15L);
++        assertThat(result.metrics).containsEntry(CellularRadarCell.Metric.SS_SINR, 0L);
++        assertThat(result.metrics).containsEntry(CellularRadarCell.Metric.CSI_RSRP, -105L);
++        assertThat(result.metrics).containsEntry(CellularRadarCell.Metric.CSI_RSRQ, -18L);
++        assertThat(result.metrics).containsEntry(CellularRadarCell.Metric.CSI_SINR, -3L);
++    }
++
++    @Test
++    public void defaultCells_preserveUnavailable_andMapAllSupportedTechnologies() {
++        CellInfo[] cells = {new CellInfoNr(), new CellInfoLte(), new CellInfoWcdma(),
++                new CellInfoGsm(), new CellInfoTdscdma(), new CellInfoCdma()};
++        CellularRadarCell.Technology[] technologies = {
++                CellularRadarCell.Technology.NR, CellularRadarCell.Technology.LTE,
++                CellularRadarCell.Technology.WCDMA, CellularRadarCell.Technology.GSM,
++                CellularRadarCell.Technology.TD_SCDMA, CellularRadarCell.Technology.CDMA};
++        for (int i = 0; i < cells.length; i++) {
++            CellularRadarCell result = CellularRadarCell.from(cells[i]);
++            assertThat(result.technology).isEqualTo(technologies[i]);
++            for (java.util.Map.Entry<CellularRadarCell.Metric, Long> entry
++                    : result.metrics.entrySet()) {
++                assertThat(entry.getValue()).isEqualTo(CellInfo.UNAVAILABLE_LONG);
++            }
++        }
++        assertThat(CellularRadarCell.from(new CellInfoWcdma()).metrics)
++                .doesNotContainKey(CellularRadarCell.Metric.PCI);
++        assertThat(CellularRadarCell.from(new CellInfoGsm()).metrics)
++                .doesNotContainKey(CellularRadarCell.Metric.TAC);
++    }
++
++    @Test
++    public void role_registeredFallback_observedAndUnknownRemainDistinct() {
++        CellInfoLte cell = new CellInfoLte();
++        cell.setCellConnectionStatus(CellInfo.CONNECTION_UNKNOWN);
++        assertThat(CellularRadarCell.from(cell).role).isEqualTo(CellularRadarCell.Role.UNKNOWN);
++        assertThat(CellularRadarCell.from(cell).isServing()).isFalse();
++        cell.setRegistered(true);
++        assertThat(CellularRadarCell.from(cell).role).isEqualTo(CellularRadarCell.Role.REGISTERED);
++        cell.setRegistered(false);
++        cell.setCellConnectionStatus(CellInfo.CONNECTION_NONE);
++        assertThat(CellularRadarCell.from(cell).role).isEqualTo(CellularRadarCell.Role.OBSERVED);
++    }
++
++    @Test
++    public void nr_bothMaximumSentinelsAreUnavailable() {
++        CellInfo cell = mock(CellInfoNr.class);
++        CellIdentityNr id = mock(CellIdentityNr.class);
++        when(cell.getCellIdentity()).thenReturn(id);
++        when(cell.getCellSignalStrength()).thenReturn(new CellSignalStrengthNr());
++        when(id.getNci()).thenReturn((long) Integer.MAX_VALUE);
++        assertThat(CellularRadarCell.from(cell).metrics)
++                .containsEntry(CellularRadarCell.Metric.NCI, CellInfo.UNAVAILABLE_LONG);
++        when(id.getNci()).thenReturn(CellInfo.UNAVAILABLE_LONG);
++        assertThat(CellularRadarCell.from(cell).metrics)
++                .containsEntry(CellularRadarCell.Metric.NCI, CellInfo.UNAVAILABLE_LONG);
++    }
++
++    @Test
++    public void nr_mapsReportedNetworkBandsAndChannel_withoutMutableReferences() {
++        CellInfo cell = mock(CellInfoNr.class);
++        CellIdentityNr id = mock(CellIdentityNr.class);
++        StringBuilder operator = new StringBuilder("Android Virtual Operator");
++        int[] bands = {41, 78, CellInfo.UNAVAILABLE, 0, -1};
++        when(cell.getCellIdentity()).thenReturn(id);
++        when(cell.getCellSignalStrength()).thenReturn(new CellSignalStrengthNr());
++        when(id.getOperatorAlphaLong()).thenReturn(operator);
++        when(id.getMccString()).thenReturn("311");
++        when(id.getMncString()).thenReturn("740");
++        when(id.getBands()).thenReturn(bands);
++        when(id.getNrarfcn()).thenReturn(520000);
++
++        CellularRadarCell result = CellularRadarCell.from(cell);
++        operator.append(" changed");
++        bands[0] = 1;
++
++        assertThat(result.operator).isEqualTo("Android Virtual Operator");
++        assertThat(result.mcc).isEqualTo("311");
++        assertThat(result.mnc).isEqualTo("740");
++        assertThat(result.plmn).isEqualTo("311740");
++        assertThat(result.bands).containsExactly(41, 78).inOrder();
++        assertThat(result.metrics).containsEntry(CellularRadarCell.Metric.NRARFCN, 520000L);
++    }
++
++    @Test
++    public void missingOrInvalidNetworkCodes_neverInventPlmn() {
++        CellInfo cell = mock(CellInfoNr.class);
++        CellIdentityNr id = mock(CellIdentityNr.class);
++        when(cell.getCellIdentity()).thenReturn(id);
++        when(cell.getCellSignalStrength()).thenReturn(new CellSignalStrengthNr());
++        when(id.getOperatorAlphaLong()).thenReturn(" ");
++        when(id.getMccString()).thenReturn("311");
++        when(id.getNrarfcn()).thenReturn(CellInfo.UNAVAILABLE);
++        CellularRadarCell partial = CellularRadarCell.from(cell);
++        assertThat(partial.operator).isEmpty();
++        assertThat(partial.mcc).isEqualTo("311");
++        assertThat(partial.mnc).isEmpty();
++        assertThat(partial.plmn).isEmpty();
++        assertThat(partial.bands).isEmpty();
++        assertThat(partial.metrics).containsEntry(
++                CellularRadarCell.Metric.NRARFCN, CellInfo.UNAVAILABLE_LONG);
++
++        when(id.getMccString()).thenReturn(null);
++        when(id.getMncString()).thenReturn("740");
++        assertThat(CellularRadarCell.from(cell).plmn).isEmpty();
++        when(id.getMccString()).thenReturn("2147483647");
++        when(id.getMncString()).thenReturn("9");
++        CellularRadarCell invalid = CellularRadarCell.from(cell);
++        assertThat(invalid.mcc).isEmpty();
++        assertThat(invalid.mnc).isEmpty();
++        assertThat(invalid.plmn).isEmpty();
++    }
++
++    @Test
++    public void legacy3gppCells_useTheirOwnNetworkIdentity() {
++        CellInfo[] cells = {mock(CellInfoWcdma.class), mock(CellInfoGsm.class),
++                mock(CellInfoTdscdma.class)};
++        CellIdentity[] identities = {mock(CellIdentityWcdma.class), mock(CellIdentityGsm.class),
++                mock(CellIdentityTdscdma.class)};
++        CellInfo[] defaults = {new CellInfoWcdma(), new CellInfoGsm(), new CellInfoTdscdma()};
++        for (int i = 0; i < cells.length; i++) {
++            when(cells[i].getCellIdentity()).thenReturn(identities[i]);
++            when(cells[i].getCellSignalStrength())
++                    .thenReturn(defaults[i].getCellSignalStrength());
++            when(identities[i].getOperatorAlphaLong()).thenReturn("Cell operator");
++            when(identities[i].getMccString()).thenReturn("001");
++            when(identities[i].getMncString()).thenReturn("007");
++            CellularRadarCell result = CellularRadarCell.from(cells[i]);
++            assertThat(result.operator).isEqualTo("Cell operator");
++            assertThat(result.plmn).isEqualTo("001007");
++            assertThat(result.bands).isEmpty();
++        }
++    }
++
++    @Test(expected = UnsupportedOperationException.class)
++    public void snapshotBands_areImmutable() {
++        CellularRadarCell.from(new CellInfoNr()).bands.add(41);
++    }
++
++    @Test(expected = UnsupportedOperationException.class)
++    public void snapshotMetrics_areImmutable() {
++        CellularRadarCell.from(new CellInfoLte()).metrics.clear();
++    }
++}
+diff --git a/tests/robotests/src/com/android/settings/network/telephony/CellularRadarFormatterTest.java b/tests/robotests/src/com/android/settings/network/telephony/CellularRadarFormatterTest.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..16c79df79f37bcfef444205f83db81a5c96572e5
+--- /dev/null
++++ b/tests/robotests/src/com/android/settings/network/telephony/CellularRadarFormatterTest.java
+@@ -0,0 +1,143 @@
++/*
++ * Copyright (C) 2026 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License
++ */
++
++package com.android.settings.network.telephony;
++
++import static com.google.common.truth.Truth.assertThat;
++import static org.mockito.Mockito.mock;
++import static org.mockito.Mockito.when;
++
++import android.telephony.CellIdentityLte;
++import android.telephony.CellIdentityNr;
++import android.telephony.CellInfo;
++import android.telephony.CellInfoLte;
++import android.telephony.CellInfoNr;
++import android.telephony.CellSignalStrengthLte;
++import android.telephony.CellSignalStrengthNr;
++
++import org.junit.Test;
++import org.junit.runner.RunWith;
++import org.robolectric.RobolectricTestRunner;
++import org.robolectric.RuntimeEnvironment;
++
++@RunWith(RobolectricTestRunner.class)
++public class CellularRadarFormatterTest {
++    private final CellularRadarFormatter mFormatter =
++            new CellularRadarFormatter(RuntimeEnvironment.application);
++
++    @Test
++    public void unavailableMetrics_doNotDisplaySentinelsOrInventUnits() {
++        String summary = mFormatter.summary(CellularRadarCell.from(new CellInfoLte()));
++        assertThat(summary).contains("PCI: Unavailable");
++        assertThat(summary).contains("RSRP: Unavailable");
++        assertThat(summary).doesNotContain("2147483647");
++        assertThat(summary).doesNotContain("9223372036854775807");
++        assertThat(summary).doesNotContain("Unavailable dBm");
++    }
++
++    @Test
++    public void lteMeasurements_correctLabelsUnitsAndZero() {
++        CellInfoLte cell = mock(CellInfoLte.class);
++        CellIdentityLte id = mock(CellIdentityLte.class);
++        CellSignalStrengthLte signal = mock(CellSignalStrengthLte.class);
++        when(cell.getCellIdentity()).thenReturn(id);
++        when(cell.getCellSignalStrength()).thenReturn(signal);
++        when(cell.getCellConnectionStatus()).thenReturn(CellInfo.CONNECTION_PRIMARY_SERVING);
++        when(id.getBands()).thenReturn(new int[] {3, 7});
++        when(id.getEarfcn()).thenReturn(1800);
++        when(signal.getRsrp()).thenReturn(-95);
++        when(signal.getRsrq()).thenReturn(-10);
++        when(signal.getRssnr()).thenReturn(0);
++
++        CellularRadarCell snapshot = CellularRadarCell.from(cell);
++
++        assertThat(mFormatter.title(snapshot)).contains("LTE");
++        assertThat(mFormatter.title(snapshot)).contains("Primary serving");
++        assertThat(mFormatter.summary(snapshot)).contains("Bands: B3, B7");
++        assertThat(mFormatter.summary(snapshot)).contains("EARFCN: 1800");
++        assertThat(mFormatter.summary(snapshot)).contains("PCI: 0");
++        assertThat(mFormatter.summary(snapshot)).contains("RSRP: -95 dBm");
++        assertThat(mFormatter.summary(snapshot)).contains("RSRQ: -10 dB");
++        assertThat(mFormatter.summary(snapshot)).contains("RSSNR: 0 dB");
++        assertThat(mFormatter.summary(snapshot)).doesNotContain("SINR:");
++    }
++
++    @Test
++    public void nrIdentity_formatsReportedFields_andPreservesLeadingZeros() {
++        CellInfo cell = mock(CellInfoNr.class);
++        CellIdentityNr id = mock(CellIdentityNr.class);
++        when(cell.getCellIdentity()).thenReturn(id);
++        when(cell.getCellSignalStrength()).thenReturn(new CellSignalStrengthNr());
++        when(id.getOperatorAlphaLong()).thenReturn("Android Virtual Operator");
++        when(id.getMccString()).thenReturn("001");
++        when(id.getMncString()).thenReturn("07");
++        when(id.getBands()).thenReturn(new int[] {41, 78});
++        when(id.getNrarfcn()).thenReturn(520000);
++
++        String summary = mFormatter.summary(CellularRadarCell.from(cell));
++
++        assertThat(summary).contains("Operator: Android Virtual Operator");
++        assertThat(summary).contains("PLMN: 00107");
++        assertThat(summary).contains("MCC: 001");
++        assertThat(summary).contains("MNC: 07");
++        assertThat(summary).contains("Bands: n41, n78");
++        assertThat(summary).contains("NRARFCN: 520000");
++        assertThat(summary).contains("SS-RSRQ: Unavailable");
++        assertThat(summary).contains("SS-SINR: Unavailable");
++        assertThat(summary).contains("CSI-RSRP: Unavailable");
++    }
++
++    @Test
++    public void defaultNrIdentityAndSignal_neverDisplaySentinels() {
++        String summary = mFormatter.summary(CellularRadarCell.from(new CellInfoNr()));
++        assertThat(summary).contains("Operator: Unavailable");
++        assertThat(summary).contains("PLMN: Unavailable");
++        assertThat(summary).contains("MCC: Unavailable");
++        assertThat(summary).contains("MNC: Unavailable");
++        assertThat(summary).contains("Bands: Unavailable");
++        assertThat(summary).contains("NRARFCN: Unavailable");
++        assertThat(summary).contains("Cell ID (NCI): Unavailable");
++        assertThat(summary).doesNotContain("2147483647");
++        assertThat(summary).doesNotContain("9223372036854775807");
++    }
++
++    @Test
++    public void partialPlmnAndSentinelBands_areExplicitlyUnavailable() {
++        CellInfo cell = mock(CellInfoNr.class);
++        CellIdentityNr id = mock(CellIdentityNr.class);
++        when(cell.getCellIdentity()).thenReturn(id);
++        when(cell.getCellSignalStrength()).thenReturn(new CellSignalStrengthNr());
++        when(id.getMccString()).thenReturn("311");
++        when(id.getBands()).thenReturn(new int[] {CellInfo.UNAVAILABLE});
++        when(id.getNci()).thenReturn(CellInfo.UNAVAILABLE_LONG);
++        when(id.getNrarfcn()).thenReturn(CellInfo.UNAVAILABLE);
++        String summary = mFormatter.summary(CellularRadarCell.from(cell));
++        assertThat(summary).contains("MCC: 311");
++        assertThat(summary).contains("MNC: Unavailable");
++        assertThat(summary).contains("PLMN: Unavailable");
++        assertThat(summary).contains("Bands: Unavailable");
++        assertThat(summary).doesNotContain("2147483647");
++        assertThat(summary).doesNotContain("9223372036854775807");
++    }
++
++    @Test
++    public void errors_explainDisplayedDataMayBeOld() {
++        assertThat(mFormatter.status(CellularRadarRepository.Status.MODEM_ERROR))
++                .contains("last reported measurements");
++        assertThat(mFormatter.status(CellularRadarRepository.Status.TIMEOUT))
++                .contains("last reported measurements");
++    }
++}

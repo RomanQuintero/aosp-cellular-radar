@@ -1,0 +1,44 @@
+{
+  "exported_at_utc": "2026-09-29T15:00:30.583283+00:00",
+  "settings_base_commit": "213829fb67f5e070029e0513a088f31bc8f5c1ed",
+  "source_branch": "cellular-radar",
+  "source_head": "44dbfd737518c26901c99f2ebffd3f8391f5ac69",
+  "patches": [
+    {
+      "file": "patches/0001-Settings-add-Cellular-Radar-entry.patch",
+      "source_commit": "21bcc1e45993c1d69011ab68077729efe7d6a0cf",
+      "origin": "Settings history"
+    },
+    {
+      "file": "patches/0002-Settings-expand-Cellular-Radar-diagnostics.patch",
+      "source_commit": "44dbfd737518c26901c99f2ebffd3f8391f5ac69",
+      "origin": "Settings history"
+    },
+    {
+      "file": "patches/0003-Settings-finish-Cellular-Radar-acquisition-and-prese.patch",
+      "export_commit": "11b2ab3221997679e3255fcbe50efea340f90872",
+      "origin": "Synthetic export of uncommitted working tree",
+      "parent_source_commit": "44dbfd737518c26901c99f2ebffd3f8391f5ac69",
+      "working_tree_paths": [
+        "res/xml/cellular_radar.xml",
+        "src/com/android/settings/network/telephony/CellularRadarFragment.java",
+        "src/com/android/settings/network/telephony/CellularRadarPreferenceController.java",
+        "src/com/android/settings/network/telephony/CellularRadarRepository.java",
+        "tests/robotests/src/com/android/settings/network/telephony/CellularRadarRepositoryTest.java"
+      ]
+    }
+  ],
+  "final_feature_files_sha256": {
+    "res/values/strings.xml": "374ab34773bbe1f7ad37302195dc95f9e771059791015665fe534fae210355a9",
+    "res/xml/cellular_radar.xml": "80cf2c0c0c97c947ec90cfac5b80490e1b864820a32db25deac48d6e1ef06ab6",
+    "res/xml/network_provider_internet.xml": "a31ebbbd00e06930cc65a7ca1768b296c841e401c674c3a325bd242e358aa795",
+    "src/com/android/settings/network/telephony/CellularRadarCell.java": "ec1381c70dfa85e5b20e7928c654cc049fb97a707acd2706607887a61f07e2cd",
+    "src/com/android/settings/network/telephony/CellularRadarFormatter.java": "8da1db1c34419b53a46e9600e83276f4f5b024e8be415195ca7f5e2c1c46cd4b",
+    "src/com/android/settings/network/telephony/CellularRadarFragment.java": "22535dd2a72fca336fcdb8a0c09955093bd1e925b5098a969793c46f54327c7f",
+    "src/com/android/settings/network/telephony/CellularRadarPreferenceController.java": "fbdda085b81722f8f5290e9ed2eaedbe72a325bf8f030ea874fd92772509bfc8",
+    "src/com/android/settings/network/telephony/CellularRadarRepository.java": "a82e643086e2efc8881111e42fb7b75ab4244473ac08cf797d1bf24058ed383d",
+    "tests/robotests/src/com/android/settings/network/telephony/CellularRadarCellTest.java": "6ba44a44e4c32139c32c9260d19b1978431a8ba45e6008035be0b297ff716f3b",
+    "tests/robotests/src/com/android/settings/network/telephony/CellularRadarFormatterTest.java": "6996a8a9452cffd4145d1e040ae45f376731b11af1c67edf647ab1cdb19178f1",
+    "tests/robotests/src/com/android/settings/network/telephony/CellularRadarRepositoryTest.java": "5b7b4eac3747e33fad04097d8576e7361cf07882285eff726b0da7757a3964d6"
+  }
+}

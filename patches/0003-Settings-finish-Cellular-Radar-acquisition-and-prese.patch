@@ -1,0 +1,532 @@
+From 11b2ab3221997679e3255fcbe50efea340f90872 Mon Sep 17 00:00:00 2001
+From: Local Publication Snapshot <snapshot@local.invalid>
+Date: Tue, 29 Sep 2026 17:00:30 +0200
+Subject: [PATCH 3/3] Settings: finish Cellular Radar acquisition and
+ presentation
+
+Publication-only snapshot of the remaining local working-tree contribution.
+This synthetic export commit was created in temporary local Git storage;
+it is not a commit in the original Settings repository.
+---
+ res/xml/cellular_radar.xml                    |  22 ++-
+ .../telephony/CellularRadarFragment.java      |  84 +++++++-
+ .../CellularRadarPreferenceController.java    |   4 +-
+ .../telephony/CellularRadarRepository.java    | 150 +++++++++++++++
+ .../CellularRadarRepositoryTest.java          | 181 ++++++++++++++++++
+ 5 files changed, 429 insertions(+), 12 deletions(-)
+ create mode 100644 src/com/android/settings/network/telephony/CellularRadarRepository.java
+ create mode 100644 tests/robotests/src/com/android/settings/network/telephony/CellularRadarRepositoryTest.java
+
+diff --git a/res/xml/cellular_radar.xml b/res/xml/cellular_radar.xml
+index 1df81677a4a4486406d463b740ab95e70b77c196..a19fb3febb5d2ea7adfa6144d0d373ddcb0529b2 100644
+--- a/res/xml/cellular_radar.xml
++++ b/res/xml/cellular_radar.xml
+@@ -1,10 +1,22 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<PreferenceScreen
+-    xmlns:android="http://schemas.android.com/apk/res/android">
++<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
++    android:title="@string/cellular_radar_title">
+ 
+     <Preference
+         android:key="cellular_radar_status"
+-        android:title="Cellular Radar"
+-        android:summary="Cellular network diagnostics ready" />
++        android:title="@string/cellular_radar_title"
++        android:selectable="false" />
+ 
+-</PreferenceScreen>
+\ No newline at end of file
++    <Preference
++        android:key="cellular_radar_refresh"
++        android:title="@string/cellular_radar_refresh" />
++
++    <PreferenceCategory
++        android:key="cellular_radar_serving"
++        android:title="@string/cellular_radar_serving" />
++
++    <PreferenceCategory
++        android:key="cellular_radar_observed"
++        android:title="@string/cellular_radar_observed" />
++
++</PreferenceScreen>
+diff --git a/src/com/android/settings/network/telephony/CellularRadarFragment.java b/src/com/android/settings/network/telephony/CellularRadarFragment.java
+index 7513d0e4162c2513d70a12f0850191c3ef6aae4a..9d2bac93394a62afcbe096317992441daec95905 100644
+--- a/src/com/android/settings/network/telephony/CellularRadarFragment.java
++++ b/src/com/android/settings/network/telephony/CellularRadarFragment.java
+@@ -1,16 +1,88 @@
++/*
++ * Copyright (C) 2026 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License
++ */
++
+ package com.android.settings.network.telephony;
+ 
+ import android.app.settings.SettingsEnums;
++import android.os.Bundle;
++
++import androidx.preference.Preference;
++import androidx.preference.PreferenceCategory;
+ 
+ import com.android.settings.R;
+ import com.android.settings.dashboard.DashboardFragment;
+ 
+-/**
+- * Cellular network diagnostics and visualization.
+- */
++import java.util.List;
++
++/** Simple diagnostic presentation of framework-reported cells. */
+ public class CellularRadarFragment extends DashboardFragment {
++    private CellularRadarRepository mRepository;
++    private CellularRadarFormatter mFormatter;
+ 
+-    private static final String TAG = "CellularRadarFragment";
++    @Override
++    public void onCreate(Bundle savedInstanceState) {
++        super.onCreate(savedInstanceState);
++        mFormatter = new CellularRadarFormatter(requireContext());
++        mRepository = new CellularRadarRepository(requireContext(), this::showCells);
++        findPreference("cellular_radar_refresh").setOnPreferenceClickListener(preference -> {
++            mRepository.start();
++            return true;
++        });
++    }
++
++    @Override
++    public void onResume() {
++        super.onResume();
++        mRepository.start();
++    }
++
++    @Override
++    public void onPause() {
++        mRepository.stop();
++        super.onPause();
++    }
++
++    private void showCells(List<CellularRadarCell> cells, CellularRadarRepository.Status status) {
++        Preference statusPreference = findPreference("cellular_radar_status");
++        statusPreference.setSummary(mFormatter.status(status));
++        PreferenceCategory serving = findPreference("cellular_radar_serving");
++        PreferenceCategory observed = findPreference("cellular_radar_observed");
++        serving.removeAll();
++        observed.removeAll();
++        for (CellularRadarCell cell : cells) {
++            Preference preference = new Preference(requireContext());
++            preference.setSelectable(false);
++            preference.setTitle(mFormatter.title(cell));
++            preference.setSummary(mFormatter.summary(cell));
++            (cell.isServing() ? serving : observed).addPreference(preference);
++        }
++        if (serving.getPreferenceCount() == 0) {
++            addEmpty(serving, R.string.cellular_radar_no_serving);
++        }
++        if (observed.getPreferenceCount() == 0) {
++            addEmpty(observed, R.string.cellular_radar_no_observed);
++        }
++    }
++
++    private void addEmpty(PreferenceCategory category, int summary) {
++        Preference preference = new Preference(requireContext());
++        preference.setSelectable(false);
++        preference.setSummary(summary);
++        category.addPreference(preference);
++    }
+ 
+     @Override
+     public int getMetricsCategory() {
+@@ -19,11 +91,11 @@ public class CellularRadarFragment extends DashboardFragment {
+ 
+     @Override
+     protected String getLogTag() {
+-        return TAG;
++        return "CellularRadarFragment";
+     }
+ 
+     @Override
+     protected int getPreferenceScreenResId() {
+         return R.xml.cellular_radar;
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/src/com/android/settings/network/telephony/CellularRadarPreferenceController.java b/src/com/android/settings/network/telephony/CellularRadarPreferenceController.java
+index e4cd57c8d60bd51b415c02b3f7a2da0d789f4baf..89d2fea0954db835a1710edab4d7951df7141bbe 100644
+--- a/src/com/android/settings/network/telephony/CellularRadarPreferenceController.java
++++ b/src/com/android/settings/network/telephony/CellularRadarPreferenceController.java
+@@ -8,6 +8,7 @@ import android.text.TextUtils;
+ import androidx.annotation.NonNull;
+ import androidx.preference.Preference;
+ 
++import com.android.settings.R;
+ import com.android.settings.core.BasePreferenceController;
+ import com.android.settings.core.SubSettingLauncher;
+ import com.android.settings.network.telephony.CellularRadarFragment;
+@@ -35,9 +36,10 @@ public class CellularRadarPreferenceController extends BasePreferenceController
+ 
+         new SubSettingLauncher(mContext)
+                 .setDestination(CellularRadarFragment.class.getName())
++                .setTitleRes(R.string.cellular_radar_title)
+                 .setSourceMetricsCategory(SettingsEnums.SETTINGS_NETWORK_CATEGORY)
+                 .launch();
+ 
+         return true;
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/src/com/android/settings/network/telephony/CellularRadarRepository.java b/src/com/android/settings/network/telephony/CellularRadarRepository.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..ee30799d22fd728ba8f9561bdc92f81fd8db59d6
+--- /dev/null
++++ b/src/com/android/settings/network/telephony/CellularRadarRepository.java
+@@ -0,0 +1,150 @@
++/*
++ * Copyright (C) 2026 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License
++ */
++
++package com.android.settings.network.telephony;
++
++import android.content.Context;
++import android.location.LocationManager;
++import android.os.Handler;
++import android.os.Looper;
++import android.telephony.CellInfo;
++import android.telephony.TelephonyCallback;
++import android.telephony.TelephonyManager;
++
++import androidx.annotation.Nullable;
++
++import java.util.ArrayList;
++import java.util.Collections;
++import java.util.List;
++
++/** Acquires snapshots for the default subscription while the screen is resumed.
++ * All methods and notifications run on the main thread.
++ */
++final class CellularRadarRepository {
++    enum Status { LOADING, READY, EMPTY, LOCATION_DISABLED, UNAVAILABLE, PERMISSION_DENIED,
++        TIMEOUT, MODEM_ERROR }
++
++    interface Listener {
++        void onCellsChanged(List<CellularRadarCell> cells, Status status);
++    }
++
++    private final Context mContext;
++    private final Listener mListener;
++    private final Handler mHandler = new Handler(Looper.getMainLooper());
++    @Nullable private final TelephonyManager mTelephonyManager;
++    @Nullable private Session mSession;
++    private List<CellularRadarCell> mCells = Collections.emptyList();
++
++    CellularRadarRepository(Context context, Listener listener) {
++        mContext = context;
++        mListener = listener;
++        mTelephonyManager = context.getSystemService(TelephonyManager.class);
++    }
++
++    void start() {
++        stop();
++        mCells = Collections.emptyList();
++        LocationManager location = mContext.getSystemService(LocationManager.class);
++        if (location != null && !location.isLocationEnabled()) {
++            publish(Status.LOCATION_DISABLED);
++            return;
++        }
++        if (mTelephonyManager == null) {
++            publish(Status.UNAVAILABLE);
++            return;
++        }
++        Session session = new Session();
++        mSession = session;
++        publish(Status.LOADING);
++        mHandler.postDelayed(session.timeout, 10000);
++        try {
++            mTelephonyManager.registerTelephonyCallback(mContext.getMainExecutor(), session);
++            mTelephonyManager.requestCellInfoUpdate(mContext.getMainExecutor(),
++                    new TelephonyManager.CellInfoCallback() {
++                        @Override
++                        public void onCellInfo(List<CellInfo> cells) {
++                            accept(session, cells);
++                        }
++
++                        @Override
++                        public void onError(int errorCode, @Nullable Throwable detail) {
++                            if (mSession == session) {
++                                mHandler.removeCallbacks(session.timeout);
++                                publish(errorCode == ERROR_TIMEOUT
++                                        ? Status.TIMEOUT : Status.MODEM_ERROR);
++                            }
++                        }
++                    });
++        } catch (SecurityException e) {
++            stop();
++            publish(Status.PERMISSION_DENIED);
++        } catch (UnsupportedOperationException | IllegalStateException e) {
++            stop();
++            publish(Status.UNAVAILABLE);
++        }
++    }
++
++    void stop() {
++        Session session = mSession;
++        mSession = null;
++        if (session == null) {
++            return;
++        }
++        mHandler.removeCallbacks(session.timeout);
++        if (mTelephonyManager != null) {
++            try {
++                mTelephonyManager.unregisterTelephonyCallback(session);
++            } catch (SecurityException | UnsupportedOperationException | IllegalStateException e) {
++                // Service may disappear or permissions may be revoked while the screen is open.
++            }
++        }
++    }
++
++    private void accept(Session session, @Nullable List<CellInfo> cells) {
++        if (mSession != session) {
++            return;
++        }
++        mHandler.removeCallbacks(session.timeout);
++        List<CellularRadarCell> snapshot = new ArrayList<>();
++        if (cells != null) {
++            for (CellInfo cell : cells) {
++                if (cell != null) {
++                    snapshot.add(CellularRadarCell.from(cell));
++                }
++            }
++        }
++        mCells = Collections.unmodifiableList(snapshot);
++        publish(mCells.isEmpty() ? Status.EMPTY : Status.READY);
++    }
++
++    private void publish(Status status) {
++        mListener.onCellsChanged(mCells, status);
++    }
++
++    private final class Session extends TelephonyCallback
++            implements TelephonyCallback.CellInfoListener {
++        final Runnable timeout = () -> {
++            if (mSession == this) {
++                publish(Status.TIMEOUT);
++            }
++        };
++
++        @Override
++        public void onCellInfoChanged(List<CellInfo> cells) {
++            accept(this, cells);
++        }
++    }
++}
+diff --git a/tests/robotests/src/com/android/settings/network/telephony/CellularRadarRepositoryTest.java b/tests/robotests/src/com/android/settings/network/telephony/CellularRadarRepositoryTest.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..e47d6b0339c6514b25149179e905ec8165a2af26
+--- /dev/null
++++ b/tests/robotests/src/com/android/settings/network/telephony/CellularRadarRepositoryTest.java
+@@ -0,0 +1,181 @@
++/*
++ * Copyright (C) 2026 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License
++ */
++
++package com.android.settings.network.telephony;
++
++import static com.google.common.truth.Truth.assertThat;
++import static org.mockito.ArgumentMatchers.any;
++import static org.mockito.ArgumentMatchers.eq;
++import static org.mockito.Mockito.doThrow;
++import static org.mockito.Mockito.mock;
++import static org.mockito.Mockito.never;
++import static org.mockito.Mockito.spy;
++import static org.mockito.Mockito.verify;
++import static org.mockito.Mockito.when;
++import static org.robolectric.Shadows.shadowOf;
++
++import android.content.Context;
++import android.location.LocationManager;
++import android.os.Looper;
++import android.telephony.CellInfo;
++import android.telephony.CellInfoLte;
++import android.telephony.TelephonyCallback;
++import android.telephony.TelephonyManager;
++
++import org.junit.Before;
++import org.junit.Test;
++import org.junit.runner.RunWith;
++import org.mockito.ArgumentCaptor;
++import org.robolectric.RobolectricTestRunner;
++import org.robolectric.RuntimeEnvironment;
++import org.robolectric.annotation.LooperMode;
++
++import java.time.Duration;
++import java.util.Arrays;
++import java.util.Collections;
++import java.util.List;
++import java.util.concurrent.Executor;
++
++@RunWith(RobolectricTestRunner.class)
++@LooperMode(LooperMode.Mode.PAUSED)
++public class CellularRadarRepositoryTest {
++    private TelephonyManager mManager;
++    private LocationManager mLocation;
++    private CellularRadarRepository mRepository;
++    private List<CellularRadarCell> mCells;
++    private CellularRadarRepository.Status mStatus;
++
++    @Before
++    public void setUp() {
++        Context context = spy(RuntimeEnvironment.application);
++        mManager = mock(TelephonyManager.class);
++        mLocation = mock(LocationManager.class);
++        when(context.getSystemService(TelephonyManager.class)).thenReturn(mManager);
++        when(context.getSystemService(LocationManager.class)).thenReturn(mLocation);
++        when(mLocation.isLocationEnabled()).thenReturn(true);
++        mRepository = new CellularRadarRepository(context, (cells, status) -> {
++            mCells = cells;
++            mStatus = status;
++        });
++    }
++
++    @Test
++    public void successfulRequest_andLiveUpdate_replaceSnapshot() {
++        mRepository.start();
++        TelephonyManager.CellInfoCallback callback = requestCallback();
++        CellInfoLte serving = new CellInfoLte();
++        serving.setRegistered(true);
++        callback.onCellInfo(Arrays.asList(serving, new CellInfoLte()));
++
++        assertThat(mStatus).isEqualTo(CellularRadarRepository.Status.READY);
++        assertThat(mCells).hasSize(2);
++        assertThat(mCells.get(0).isServing()).isTrue();
++        liveCallback().onCellInfoChanged(Collections.emptyList());
++        assertThat(mStatus).isEqualTo(CellularRadarRepository.Status.EMPTY);
++        assertThat(mCells).isEmpty();
++    }
++
++    @Test
++    public void nullAndEmptyResults_areHandled() {
++        mRepository.start();
++        requestCallback().onCellInfo(null);
++        assertThat(mStatus).isEqualTo(CellularRadarRepository.Status.EMPTY);
++        assertThat(mCells).isEmpty();
++    }
++
++    @Test
++    public void modemError_preservesLastReportedCells() {
++        mRepository.start();
++        TelephonyManager.CellInfoCallback callback = requestCallback();
++        liveCallback().onCellInfoChanged(Collections.singletonList(new CellInfoLte()));
++        callback.onError(TelephonyManager.CellInfoCallback.ERROR_MODEM_ERROR, null);
++        assertThat(mStatus).isEqualTo(CellularRadarRepository.Status.MODEM_ERROR);
++        assertThat(mCells).hasSize(1);
++    }
++
++    @Test
++    public void timeoutWithoutCallback_leavesLoadingState() {
++        mRepository.start();
++        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(11));
++        assertThat(mStatus).isEqualTo(CellularRadarRepository.Status.TIMEOUT);
++    }
++
++    @Test
++    public void locationOff_doesNotRequestCellInformation() {
++        when(mLocation.isLocationEnabled()).thenReturn(false);
++        mRepository.start();
++        assertThat(mStatus).isEqualTo(CellularRadarRepository.Status.LOCATION_DISABLED);
++        verify(mManager, never()).requestCellInfoUpdate(any(Executor.class),
++                any(TelephonyManager.CellInfoCallback.class));
++    }
++
++    @Test
++    public void deniedPermission_doesNotCrash_andUnregisters() {
++        doThrow(new SecurityException()).when(mManager)
++                .requestCellInfoUpdate(any(Executor.class),
++                        any(TelephonyManager.CellInfoCallback.class));
++        mRepository.start();
++        assertThat(mStatus).isEqualTo(CellularRadarRepository.Status.PERMISSION_DENIED);
++        verify(mManager).unregisterTelephonyCallback(any(TelephonyCallback.class));
++    }
++
++    @Test
++    public void unavailableService_doesNotCrash() {
++        doThrow(new IllegalStateException()).when(mManager)
++                .registerTelephonyCallback(any(Executor.class), any(TelephonyCallback.class));
++        mRepository.start();
++        assertThat(mStatus).isEqualTo(CellularRadarRepository.Status.UNAVAILABLE);
++    }
++
++    @Test
++    public void stop_unregisters_andIgnoresLateCallbacksAndTimeout() {
++        mRepository.start();
++        TelephonyManager.CellInfoCallback request = requestCallback();
++        TelephonyCallback.CellInfoListener live = liveCallback();
++        mRepository.stop();
++
++        verify(mManager).unregisterTelephonyCallback(eq((TelephonyCallback) live));
++        request.onCellInfo(Collections.singletonList(new CellInfoLte()));
++        request.onError(TelephonyManager.CellInfoCallback.ERROR_TIMEOUT, null);
++        live.onCellInfoChanged(Collections.singletonList(new CellInfoLte()));
++        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(11));
++        assertThat(mStatus).isEqualTo(CellularRadarRepository.Status.LOADING);
++        assertThat(mCells).isEmpty();
++    }
++
++    @Test
++    public void refresh_ignoresPreviousRequest() {
++        mRepository.start();
++        TelephonyManager.CellInfoCallback oldRequest = requestCallback();
++        mRepository.start();
++        oldRequest.onCellInfo(Collections.singletonList(new CellInfoLte()));
++        assertThat(mStatus).isEqualTo(CellularRadarRepository.Status.LOADING);
++        assertThat(mCells).isEmpty();
++    }
++
++    private TelephonyManager.CellInfoCallback requestCallback() {
++        ArgumentCaptor<TelephonyManager.CellInfoCallback> captor =
++                ArgumentCaptor.forClass(TelephonyManager.CellInfoCallback.class);
++        verify(mManager).requestCellInfoUpdate(any(Executor.class), captor.capture());
++        return captor.getValue();
++    }
++
++    private TelephonyCallback.CellInfoListener liveCallback() {
++        ArgumentCaptor<TelephonyCallback> captor = ArgumentCaptor.forClass(TelephonyCallback.class);
++        verify(mManager).registerTelephonyCallback(any(Executor.class), captor.capture());
++        return (TelephonyCallback.CellInfoListener) captor.getValue();
++    }
++}
